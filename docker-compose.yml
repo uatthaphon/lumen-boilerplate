@@ -1,0 +1,46 @@
+version: '3.5'
+services:
+    lumen:
+        ports:
+          - '${APP_PORT:-8000}:8000'
+        volumes:
+          - .:/var/www/html
+          - /var/www/html/vendor/
+        build: .
+        platform: linux/arm64
+        command: php -S lumen:8000 -t public
+        restart: always
+        depends_on:
+            - mariadb
+            - redis
+    mariadb:
+        image: 'mariadb:10'
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+        volumes:
+            - 'sailmariadb:/var/lib/mysql'
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}"]
+            retries: 3
+            timeout: 5s
+    redis:
+        image: 'redis:alpine'
+        ports:
+            - '${FORWARD_REDIS_PORT:-6379}:6379'
+        volumes:
+            - 'sailredis:/data'
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            retries: 3
+            timeout: 5s
+volumes:
+    sailmariadb:
+        driver: local
+    sailredis:
+        driver: local
